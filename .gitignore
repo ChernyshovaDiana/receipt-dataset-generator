@@ -1,0 +1,31 @@
+# Сгенерированные данные
+generated_receipts_dataset/
+final_results/
+final_results_augmented/
+debug_corners/
+realistic_backgrounds_300/
+
+# Изображения
+*.png
+*.jpg
+*.jpeg
+
+# Данные
+*.json
+*.zip
+*.db
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+
+# Системные
+.DS_Store
+Thumbs.db

@@ -2,27 +2,33 @@ import cv2
 import numpy as np
 import json
 import os
-import glob
-from pathlib import Path
 import matplotlib.pyplot as plt
+from IPython.display import display, Image as IPImage
+import zipfile
+import io
 
 print("🎯 ПАКЕТНАЯ ОБРАБОТКА ФОНОВ")
 print("=" * 60)
 
-print("\n1️⃣ Загружаем фоны из папки realistic_backgrounds_300/")
-
 backgrounds_folder = "realistic_backgrounds_300"
-uploaded = {}
 
-if Path(backgrounds_folder).exists():
-    for img_path in glob.glob(f"{backgrounds_folder}/*.png"):
-        with open(img_path, "rb") as f:
-            uploaded[Path(img_path).name] = f.read()
-    print(f"✅ Загружено {len(uploaded)} фонов из папки")
-else:
+# Проверяем, существует ли папка
+if not os.path.exists(backgrounds_folder):
     print(f"❌ Папка {backgrounds_folder} не найдена!")
-    print("   Сначала запустите шаг 1 (генерация фонов)")
-    exit(1)
+    print("   Сначала запустите блок генерации фонов.")
+    raise FileNotFoundError(f"Папка {backgrounds_folder} не найдена")
+
+image_files = [f for f in os.listdir(backgrounds_folder) if f.endswith('.png')]
+print(f"✅ Найдено фонов: {len(image_files)}")
+
+uploaded = {}
+for filename in image_files:
+    filepath = os.path.join(backgrounds_folder, filename)
+    with open(filepath, "rb") as f:
+        uploaded[filename] = f.read()
+
+print(f"✅ Загружено файлов: {len(uploaded)}")
+print("-" * 60)
 
 MIN_HEIGHTS = {
     "ШЕСТЕРОЧКА": 564,
@@ -76,7 +82,6 @@ def order_corners_correct(pts):
     return np.array([top_left, top_right, bottom_right, bottom_left], dtype=np.float32)
 
 def detect_corners_and_size(image):
-    """Находит углы и размеры белого прямоугольника на изображении"""
     bg_gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     bg_blur = cv2.GaussianBlur(bg_gray, (7, 7), 0)
     _, light_mask = cv2.threshold(bg_blur, 200, 255, cv2.THRESH_BINARY)
@@ -141,13 +146,14 @@ for idx, (filename, content) in enumerate(uploaded.items()):
 
 print(f"\n✅ Успешно обработано: {len(backgrounds_info)} из {len(uploaded)}")
 
+
 backgrounds_info.sort(key=lambda x: x["suitable_count"], reverse=True)
 
 print("\n💾 Сохраняем результаты...")
 
 result_json = {
     "total": len(backgrounds_info),
-    "min_heights": MIN_HEIGHTS, 
+    "min_heights": MIN_HEIGHTS,
     "backgrounds": backgrounds_info
 }
 
@@ -218,11 +224,25 @@ for i, info in enumerate(backgrounds_info):
     plt.axis('off')
     plt.show()
 
+print("\n📥 Скачиваем файл с результатами...")
+
+zip_buffer = io.BytesIO()
+with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+    zip_file.writestr('backgrounds_sizes_with_shops.json', json_str)
+
+zip_buffer.seek(0)
+
+with open('backgrounds_data.zip', 'wb') as f:
+    f.write(zip_buffer.getvalue())
+
+files.download('backgrounds_data.zip')
+
 print("\n" + "=" * 60)
 print("🎉 ГОТОВО!")
 print("=" * 60)
 print(f"✅ Обработано фонов: {len(backgrounds_info)}")
 print(f"✅ Результаты сохранены в backgrounds_sizes_with_shops.json")
+print(f"✅ Файл упакован в backgrounds_data.zip и скачан")
 print("\n📋 Структура JSON файла:")
 print("   - total: количество фонов")
 print("   - min_heights: справочник минимальных высот для каждого магазина")
